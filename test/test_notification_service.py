@@ -1,12 +1,11 @@
+import os
 import unittest
 from typing import Dict, Tuple
-
 from email_validator import EmailSyntaxError
-
 from notification_service.Notification import Notification
 # noinspection PyUnresolvedReferences
 from notification_service.NotificationService \
-    import Email, Mobile, NotificationService, Slack, Teams, Zoom  # noqa: F401
+    import Email, Mobile, NotificationService, Slack, Teams, Zoom, Whatsapp  # noqa: F401
 from notification_service.NotificationType import NotificationType
 
 
@@ -26,21 +25,39 @@ class NotificationServiceTest(unittest.TestCase):
     def setUpClass(**kwargs) -> None:
         credentials: Dict[str, dict] = {  # TODO: Add credentials.
             'email': {
-                'email': 'abc@gmail.com',
-            },  # https://docs.python.org/3/library/email.examples.html
+                    'email': os.environ.get('email'),
+                    'ssh_key': os.environ.get("ssh_key")
+            },
             'mobile': {},  # https://www.twilio.com/docs/libraries/python
             'slack': {},  # https://slack.dev/python-slack-sdk/
             'teams': {},
-            'zoom': {}  # https://marketplace.zoom.us/docs/api-reference/using-zoom-apis
+            'zoom': {},  # https://marketplace.zoom.us/docs/api-reference/using-zoom-apis
+            'whatsapp': {}
         }
-        invalid_credentials: Dict[str, dict] = {  # TODO: Add invalid credentials.
+        invalid_credentials: Dict[str, dict] = {
             'email': {
-                'email': 'abc#gmail.com',
+                'email': 'BOB',
+                'ssh_key': 'lkan;JNSCKLJWFNS'
+            },
+            'none_email': {
+                'email': None,
+                'ssh_key': os.environ.get("ssh_key")
+            },
+            'no_email': {
+                'ssh_key': os.environ.get("ssh_key")
+            },
+            'email_no_ssh': {
+                'email': 'bob@gmail.com'
+            },
+            'email_none_ssh': {
+                'email': 'bob@gmail.com',
+                'ssh_key': None
             },
             'mobile': {},
             'slack': {},
             'teams': {},
-            'zoom': {}
+            'zoom': {},
+            'whatsapp': {}
         }
         for notification_service_cls in NotificationService.__subclasses__():
             name: str = notification_service_cls.__name__.lower()
@@ -57,7 +74,51 @@ class NotificationServiceTest(unittest.TestCase):
                 'expected_init_exception': None,
                 'expected_notify_exception': None,
             },
-            # TODO: Add all scenarios
+            {
+                'name': 'Email notification - Invalid sender email',
+                'notification_service_name': 'email',
+                'recipients': ('sender@mail.com',),
+                'notification': Notification(NotificationType.TEXT, "This message is like Schrodinger's cat"),
+                'credentials': invalid_credentials['email'],
+                'expected_init_exception': EmailSyntaxError,
+                'expected_notify_exception': None,
+            },
+            {
+                'name': 'Email notification - None Email',
+                'notification_service_name': 'email',
+                'recipients': ('sender@mail.com',),
+                'notification': Notification(NotificationType.TEXT, "This message is like Schrodinger's cat"),
+                'credentials': invalid_credentials['none_email'],
+                'expected_init_exception': AttributeError,
+                'expected_notify_exception': None,
+            },
+            {
+                'name': 'Email notification - No Email',
+                'notification_service_name': 'email',
+                'recipients': ('sender@mail.com',),
+                'notification': Notification(NotificationType.TEXT, "This message is like Schrodinger's cat"),
+                'credentials': invalid_credentials['no_email'],
+                'expected_init_exception': AttributeError,
+                'expected_notify_exception': None,
+            },
+            {
+                'name': 'Email notification - Email no ssh',
+                'notification_service_name': 'email',
+                'recipients': ('sender@mail.com',),
+                'notification': Notification(NotificationType.TEXT, "This message is like Schrodinger's cat"),
+                'credentials': invalid_credentials['email_no_ssh'],
+                'expected_init_exception': AttributeError,
+                'expected_notify_exception': None,
+            },
+            {
+                'name': 'Email notification - Email none ssh',
+                'notification_service_name': 'email',
+                'recipients': ('sender@mail.com',),
+                'notification': Notification(NotificationType.TEXT, "This message is like Schrodinger's cat"),
+                'credentials': invalid_credentials['email_none_ssh'],
+                'expected_init_exception': AttributeError,
+                'expected_notify_exception': None,
+            },
             {
                 'name': 'Email notification - Invalid recipient',
                 'notification_service_name': 'email',
@@ -76,14 +137,6 @@ class NotificationServiceTest(unittest.TestCase):
                 'expected_init_exception': EmailSyntaxError,
                 'expected_notify_exception': None,
             },
-            # {
-            #     'name': 'Email notification - Unsupported notification types',
-            #     'notification_service_name': 'email',
-            #     'recipients': ('',),
-            #     'notification': Notification('unknown', 'content'),
-            #     'expected_init_exception': None,
-            #     'expected_notify_exception': AttributeError,
-            # },
             {
                 'name': 'Slack notification - Valid scenarios',
                 'notification_service_name': 'slack',
